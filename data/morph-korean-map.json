@@ -1,0 +1,159 @@
+{
+  "_comment": "OSHB 형태론 코드 → 한국어 매핑 테이블. DATA_PIPELINE.md Stage 2 기반.",
+  "_source": "Open Scriptures Hebrew Bible (CC BY 4.0)",
+
+  "pos": {
+    "V": "동사",
+    "N": "명사",
+    "A": "형용사",
+    "P": "대명사",
+    "R": "전치사",
+    "C": "접속사",
+    "D": "부사",
+    "T": "관사/입자",
+    "S": "접미대명사",
+    "E": "감탄사"
+  },
+
+  "binyan": {
+    "q": { "ko": "칼", "en": "Qal", "meaning": "기본 능동" },
+    "N": { "ko": "니팔", "en": "Niphal", "meaning": "수동/재귀" },
+    "p": { "ko": "피엘", "en": "Piel", "meaning": "강의/사역 능동" },
+    "P": { "ko": "푸알", "en": "Pual", "meaning": "강의/사역 수동" },
+    "h": { "ko": "히필", "en": "Hiphil", "meaning": "사역 능동" },
+    "H": { "ko": "호팔", "en": "Hophal", "meaning": "사역 수동" },
+    "t": { "ko": "히트파엘", "en": "Hitpael", "meaning": "재귀/반복" },
+    "o": { "ko": "폴렐", "en": "Polel", "meaning": "강의/사역 (중공동사)" },
+    "O": { "ko": "폴알", "en": "Polal", "meaning": "강의/사역 수동 (중공동사)" },
+    "r": { "ko": "히트폴렐", "en": "Hitpolel", "meaning": "재귀 (중공동사)" },
+    "m": { "ko": "필펠", "en": "Pilpel", "meaning": "강의 (약동사)" },
+    "M": { "ko": "풀팔", "en": "Pulpal", "meaning": "강의 수동 (약동사)" },
+    "k": { "ko": "팔알", "en": "Palal", "meaning": "특수 강의형" },
+    "K": { "ko": "폴팔", "en": "Polpal", "meaning": "특수 강의 수동형" },
+    "Q": { "ko": "킬렐", "en": "Qilel", "meaning": "특수 약동사형" },
+    "l": { "ko": "필렐", "en": "Pilel", "meaning": "특수 강의형" },
+    "L": { "ko": "폴렐", "en": "Polel (alt)", "meaning": "특수 형태" },
+    "f": { "ko": "히트파르엘", "en": "Hitparel", "meaning": "특수 재귀형" },
+    "D": { "ko": "파엘", "en": "Pael", "meaning": "아람어 강의형" },
+    "a": { "ko": "아펠", "en": "Aphel", "meaning": "아람어 사역형" }
+  },
+
+  "tense": {
+    "p": { "ko": "완료형", "en": "Perfect", "desc": "완결된 행위/상태" },
+    "i": { "ko": "미완료형", "en": "Imperfect", "desc": "미완결/반복/습관적 행위" },
+    "w": { "ko": "와우계속법", "en": "Wayyiqtol", "desc": "서사 과거 (와우+미완료)" },
+    "v": { "ko": "명령법", "en": "Imperative", "desc": "직접 명령" },
+    "a": { "ko": "능동분사", "en": "Active Participle", "desc": "진행/상태 (명사적 용법 포함)" },
+    "s": { "ko": "수동분사", "en": "Passive Participle", "desc": "수동 상태" },
+    "c": { "ko": "부정사 연계형", "en": "Infinitive Construct", "desc": "동사의 명사형 (전치사와 결합)" },
+    "x": { "ko": "부정사 절대형", "en": "Infinitive Absolute", "desc": "강조 용법" },
+    "j": { "ko": "접속법 (유서시브)", "en": "Jussive", "desc": "3인칭 명령/소원" },
+    "h": { "ko": "코호르타티브", "en": "Cohortative", "desc": "1인칭 소원/의지" },
+    "q": { "ko": "연속 완료형", "en": "Waw + Perfect", "desc": "접속 완료형 (서사/예언)" }
+  },
+
+  "person": {
+    "1": "1인칭",
+    "2": "2인칭",
+    "3": "3인칭"
+  },
+
+  "gender": {
+    "m": "남성",
+    "f": "여성",
+    "c": "공통",
+    "b": "남녀공통"
+  },
+
+  "number": {
+    "s": "단수",
+    "p": "복수",
+    "d": "양수(dual)"
+  },
+
+  "noun_type": {
+    "c": "보통명사",
+    "p": "고유명사",
+    "g": "지명",
+    "m": "물질명사"
+  },
+
+  "noun_state": {
+    "a": "절대형",
+    "c": "연계형(construct)",
+    "d": "한정형(determined)"
+  },
+
+  "adjective_type": {
+    "a": "형용사",
+    "c": "서수",
+    "g": "지시형용사",
+    "o": "서수형용사"
+  },
+
+  "pronoun_type": {
+    "p": "인칭대명사",
+    "r": "관계대명사",
+    "d": "지시대명사",
+    "i": "의문대명사",
+    "f": "부정대명사",
+    "x": "재귀대명사"
+  },
+
+  "particle_type": {
+    "d": "정관사",
+    "e": "감탄사",
+    "i": "의문사",
+    "j": "부정사",
+    "m": "음악 기호",
+    "n": "부정사",
+    "o": "직접 목적어 표지",
+    "r": "관계사",
+    "s": "접속사"
+  },
+
+  "preposition_type": {
+    "r": "일반 전치사",
+    "c": "접두 전치사 (ב, כ, ל, מ)"
+  },
+
+  "suffix_person": {
+    "1": "1인칭",
+    "2": "2인칭",
+    "3": "3인칭"
+  },
+
+  "suffix_gender": {
+    "m": "남성",
+    "f": "여성",
+    "c": "공통"
+  },
+
+  "suffix_number": {
+    "s": "단수",
+    "p": "복수"
+  },
+
+  "colors": {
+    "V": "#F67280",
+    "N": "#85CDCA",
+    "A": "#C3B1E1",
+    "P": "#FF9A9E",
+    "R": "#E8A87C",
+    "C": "#E8A87C",
+    "D": "#A8D8EA",
+    "T": "#FFD93D",
+    "S": "#A8D8EA",
+    "E": "#FFD93D"
+  },
+
+  "binyan_colors": {
+    "q": "#F67280",
+    "N": "#85CDCA",
+    "p": "#C3B1E1",
+    "P": "#A8D8EA",
+    "h": "#E8A87C",
+    "H": "#FFD93D",
+    "t": "#FF9A9E"
+  }
+}
