@@ -31,6 +31,12 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 )
 
+// Storage 업로드 전용 (service_role)
+const adminSupabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+)
+
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
@@ -73,39 +79,66 @@ async function checkAndConfirmCost() {
 }
 
 // ─────────────────────────────────────────
+// 스타일 정의 (단어 유형별)
+// ─────────────────────────────────────────
+
+const STYLES = {
+  ABSTRACT:
+    'Hebrew calligraphy as central visual element, large ancient script letterforms, surrounded by abstract golden light and texture, aged parchment background, no figurative elements, no latin text',
+  CONCRETE:
+    'classic biblical illustration style, warm watercolor line art, Annie Vallotton inspired, simple clean lines, earthy tones, no text',
+}
+
+// ─────────────────────────────────────────
 // 이미지 프롬프트 생성 (Claude)
 // ─────────────────────────────────────────
 
 async function generateImagePrompt(card) {
   /**
    * Claude로 영어 이미지 프롬프트 생성
+   * 단어 유형(추상/구체) 판단은 Claude에게 위임
    * SEMANTIC_CARDS_SPEC.md §4.2 템플릿 기준
    */
-  const promptRequest = `Create a DALL-E image generation prompt for this Hebrew word's meaning:
+  const promptRequest = `You are creating a DALL-E image generation prompt for a Hebrew Bible vocabulary card.
 
 Hebrew word: ${card.hebrew_word}
 Meaning label: ${card.meaning_label}
 Description: ${card.description}
 
-Rules for the prompt:
+Step 1 — Classify the Hebrew word as ABSTRACT or CONCRETE:
+- ABSTRACT: divine names, spiritual/theological concepts, covenantal terms (e.g. אֱלֹהִים, יְהוָה, נֶפֶשׁ, רוּחַ, עוֹלָם, קָדוֹשׁ, אֱמוּנָה, בְּרִית, תּוֹרָה, אֶחָד)
+- CONCRETE: everything else (people, animals, objects, places, physical actions)
+
+Step 2 — Use the matching style:
+- ABSTRACT style: ${STYLES.ABSTRACT}
+- CONCRETE style: ${STYLES.CONCRETE}
+
+Step 3 — Write the image generation prompt following these rules:
 1. Describe a scene or symbol that evokes this meaning
-2. Style: warm golden tones, ancient texture, minimal illustration style
+2. Apply the chosen style exactly as written above
 3. NO text in the image
 4. NO specific ethnic/racial representations of people
 5. NO explicit religious symbols (no crosses, tabernacles, etc.)
 6. NO violent scenes
 7. Mood: contemplative, soft lighting
 8. Keep it under 150 words
+9. Unique seed: ${Math.random().toString(36).slice(2)}
 
-Respond with ONLY the English prompt text. No explanation, no quotes.`
+Respond in JSON with exactly two fields:
+{ "styleKey": "ABSTRACT" or "CONCRETE", "prompt": "<English prompt text>" }`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 256,
+    max_tokens: 512,
     messages: [{ role: 'user', content: promptRequest }],
   })
 
-  return message.content[0].text.trim()
+  const raw = message.content[0].text.trim()
+  // JSON 파싱
+  const jsonMatch = raw.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) throw new Error(`Claude 응답 JSON 파싱 실패: ${raw}`)
+  const parsed = JSON.parse(jsonMatch[0])
+  return { styleKey: parsed.styleKey, prompt: parsed.prompt.trim() }
 }
 
 // ─────────────────────────────────────────
@@ -114,16 +147,21 @@ Respond with ONLY the English prompt text. No explanation, no quotes.`
 
 async function processCard(card, index, total) {
   const prefix = `[${String(index + 1).padStart(2, '0')}/${total}]`
-  const label = `${card.hebrew_word} / ${card.meaning_label}`
 
-  // 이미지 프롬프트 생성
+  // 이미지 프롬프트 생성 (Claude가 스타일 판단)
   let imagePrompt = ''
+  let styleKey = ''
   try {
-    imagePrompt = await generateImagePrompt(card)
+    const result = await generateImagePrompt(card)
+    imagePrompt = result.prompt
+    styleKey = result.styleKey
   } catch (promptErr) {
-    console.error(`❌ ${prefix} ${label} — 프롬프트 생성 실패: ${promptErr.message}`)
+    console.error(`❌ ${prefix} ${card.hebrew_word} / ${card.meaning_label} — 프롬프트 생성 실패: ${promptErr.message}`)
     return { success: false }
   }
+
+  const label = `${card.hebrew_word} / ${card.meaning_label} [${styleKey}]`
+  console.log(`   스타일 선택: ${styleKey} (${card.hebrew_word})`)
 
   // gpt-image-1-mini 이미지 생성 (base64 응답)
   let imageBase64 = ''
@@ -143,9 +181,9 @@ async function processCard(card, index, total) {
 
   // base64 → Buffer → Supabase Storage 업로드
   const imageBuffer = Buffer.from(imageBase64, 'base64')
-  const storagePath = `cards/${card.id}.png`
+  const storagePath = `cards/${card.id}_${Date.now()}.png`
 
-  const { error: uploadErr } = await supabase.storage
+  const { error: uploadErr } = await adminSupabase.storage
     .from('semantic-card-images')
     .upload(storagePath, imageBuffer, {
       contentType: 'image/png',
@@ -158,7 +196,7 @@ async function processCard(card, index, total) {
   }
 
   // public URL 획득
-  const { data: urlData } = supabase.storage
+  const { data: urlData } = adminSupabase.storage
     .from('semantic-card-images')
     .getPublicUrl(storagePath)
 
@@ -187,13 +225,12 @@ async function processCard(card, index, total) {
 // ─────────────────────────────────────────
 
 async function main() {
-  const targetCount = await checkAndConfirmCost()
+  await checkAndConfirmCost()
 
-  // 이미지 없는 카드 조회 (실제 스키마 기준)
+  // 미검수 카드 전체 조회 (image_url 유무 무관하게 덮어씀)
   const { data: cards, error: cardsErr } = await supabase
     .from('semantic_cards')
     .select('id, lemma, hebrew_word, meaning_label, description')
-    .is('image_url', null)
     .eq('reviewed', false)
     .order('id')
 
@@ -229,8 +266,7 @@ async function main() {
   console.log(`   실패: ${failCount}장`)
   console.log(`   Storage 경로: semantic-card-images/cards/<id>.png`)
   console.log('\n📋 검증 쿼리:')
-  console.log('   SELECT COUNT(*) FROM semantic_cards WHERE image_url IS NOT NULL;')
-  console.log(`   -- 기대값: ~${targetCount}`)
+  console.log('   SELECT id, hebrew_word, image_url FROM semantic_cards WHERE reviewed = false ORDER BY id;')
 }
 
 main()

@@ -3,8 +3,8 @@
  * Stage 5: words 테이블의 learning_note, pgn, related_words 컬럼 생성
  * 실행: node scripts/generate-learning-notes.mjs
  *
- * 처리 단위: 구절(passage) 단위 배치 — 1 API 호출 = 1 구절의 모든 단어
- * 총 30회 API 호출 (이미 처리된 구절 건너뜀)
+ * 처리 단위: 단어 3개씩 청크 분할 — 1 API 호출 = 3개 단어
+ * (구절 단위 1회 호출 시 4096토큰 초과로 JSON 잘림 문제 해결)
  */
 
 import Anthropic from '@anthropic-ai/sdk'
@@ -111,68 +111,98 @@ async function processPassage(passage, index, total) {
     return { success: true, skipped: true }
   }
 
-  // 이미 처리된 단어가 있으면 건너뜀 (재시도 로직)
+  // 단어 단위 skip 판정: learning_note가 NULL인 단어가 하나라도 있으면 재처리
   const unprocessed = words.filter((w) => w.learning_note === null)
   if (unprocessed.length === 0) {
-    console.log(`✅ ${prefix} ${passage.reference} — 이미 처리됨 (${words.length}개), 건너뜀`)
+    console.log(`⏭  ${prefix} ${passage.reference} — 전체 단어 처리 완료 (${words.length}개), 건너뜀`)
     return { success: true, skipped: true }
   }
 
-  // Claude API 호출
-  const prompt = await buildPrompt(passage.reference, passage.hebrew_text, words)
-
-  let responseText = ''
-  try {
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
-    })
-    responseText = message.content[0].text
-  } catch (apiErr) {
-    console.error(`❌ ${prefix} ${passage.reference} — API 오류: ${apiErr.message}`)
-    return { success: false }
+  // 단어 3개씩 청크 분할 후 청크별 API 호출
+  const CHUNK_SIZE = 3
+  const chunks = []
+  for (let i = 0; i < unprocessed.length; i += CHUNK_SIZE) {
+    chunks.push(unprocessed.slice(i, i + CHUNK_SIZE))
   }
 
-  // JSON 파싱
-  let parsed
-  try {
-    // 코드블록 감싸기 제거
-    const clean = responseText.replace(/```json\n?|\n?```/g, '').trim()
-    parsed = JSON.parse(clean)
-  } catch (parseErr) {
-    console.error(`❌ ${prefix} ${passage.reference} — JSON 파싱 실패`)
-    console.error('   응답 미리보기:', responseText.slice(0, 200))
-    return { success: false }
-  }
+  /** 전체 청크에서 합산된 결과 */
+  const allItems = []
+  let chunkFail = 0
 
-  if (!parsed.words || !Array.isArray(parsed.words)) {
-    console.error(`❌ ${prefix} ${passage.reference} — 응답 형식 오류`)
-    return { success: false }
-  }
+  for (let c = 0; c < chunks.length; c++) {
+    const chunk = chunks[c]
+    const prompt = await buildPrompt(passage.reference, passage.hebrew_text, chunk)
 
-  // Supabase 업데이트
-  let updateCount = 0
-  for (const item of parsed.words) {
-    if (!item.word_id) continue
-
-    const { error: updateErr } = await supabase
-      .from('words')
-      .update({
-        learning_note: item.learning_note ?? null,
-        pgn: item.pgn ?? null,
-        related_words: item.related_words ?? null,
+    let responseText = ''
+    try {
+      const message = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4096,
+        messages: [{ role: 'user', content: prompt }],
       })
-      .eq('id', item.word_id)
+      responseText = message.content[0].text
+    } catch (apiErr) {
+      console.error(`❌ ${prefix} ${passage.reference} 청크${c + 1} — API 오류: ${apiErr.message}`)
+      chunkFail++
+      continue
+    }
 
-    if (updateErr) {
-      console.error(`   ⚠️  word_id ${item.word_id} 업데이트 실패: ${updateErr.message}`)
-    } else {
-      updateCount++
+    try {
+      const clean = responseText.replace(/```json\n?|\n?```/g, '').trim()
+      const parsed = JSON.parse(clean)
+      if (parsed.words && Array.isArray(parsed.words)) {
+        allItems.push(...parsed.words)
+      } else {
+        console.error(`❌ ${prefix} ${passage.reference} 청크${c + 1} — 응답 형식 오류`)
+        chunkFail++
+      }
+    } catch (parseErr) {
+      console.error(`❌ ${prefix} ${passage.reference} 청크${c + 1} — JSON 파싱 실패`)
+      console.error('   응답 미리보기:', responseText.slice(0, 200))
+      chunkFail++
+    }
+
+    // 청크 간 대기 (마지막 청크 제외)
+    if (c < chunks.length - 1) {
+      await sleep(2000)
     }
   }
 
-  console.log(`✅ ${prefix} ${passage.reference.padEnd(20)} — 단어 ${updateCount}/${words.length}개 업데이트`)
+  if (allItems.length === 0) {
+    console.error(`❌ ${prefix} ${passage.reference} — 모든 청크 실패`)
+    return { success: false }
+  }
+
+  // Supabase 업데이트 (합산된 결과, 실패 시 최대 3회 재시도)
+  let updateCount = 0
+  for (const item of allItems) {
+    if (!item.word_id) continue
+
+    let lastErr = null
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const { error: updateErr } = await supabase
+        .from('words')
+        .update({
+          learning_note: item.learning_note ?? null,
+          pgn: item.pgn ?? null,
+          related_words: item.related_words ?? null,
+        })
+        .eq('id', item.word_id)
+
+      if (!updateErr) {
+        updateCount++
+        lastErr = null
+        break
+      }
+      lastErr = updateErr
+    }
+    if (lastErr) {
+      console.error(`   ⚠️  word_id ${item.word_id} 업데이트 실패 (3회 시도): ${lastErr.message}`)
+    }
+  }
+
+  const chunkInfo = chunkFail > 0 ? ` (청크 실패 ${chunkFail}개)` : ''
+  console.log(`✅ ${prefix} ${passage.reference.padEnd(20)} — 단어 ${updateCount}/${unprocessed.length}개 업데이트${chunkInfo}`)
   return { success: true, count: updateCount }
 }
 
@@ -210,7 +240,7 @@ async function main() {
 
     // 마지막 구절이 아니고 실제 API 호출한 경우만 대기
     if (i < passages.length - 1 && result.success && !result.skipped) {
-      await sleep(30000) // Rate limit 대응: 30초 대기
+      await sleep(10000) // Rate limit 대응: 10초 대기 (Sonnet 4.6 분당 50회, 구절당 최대 3회)
     }
   }
 
