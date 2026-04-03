@@ -259,7 +259,7 @@ function WordButton({
         unicodeBidi: 'isolate',
       }}
     >
-      {/* 히브리어 */}
+      {/* 히브리어 — OSHB 원본의 접두어 구분자(/) 제거 */}
       <span
         style={{
           fontFamily: 'Noto Serif Hebrew, serif',
@@ -270,7 +270,7 @@ function WordButton({
           unicodeBidi: 'isolate',
         }}
       >
-        {word.hebrew}
+        {word.hebrew.replace(/\//g, '')}
       </span>
       {/* 의미 (gloss) */}
       <span
