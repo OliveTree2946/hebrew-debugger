@@ -216,7 +216,6 @@ function MorphTab({ word }: { word: Word }) {
               flexWrap: 'wrap',
               gap: '8px',
               direction: 'rtl',
-              unicodeBidi: 'isolate',
             }}
           >
             {word.morph_parts.map((part, i) => (
@@ -232,7 +231,7 @@ function MorphTab({ word }: { word: Word }) {
                   border: `1px solid ${part.color}40`,
                   borderRadius: '6px',
                   direction: 'rtl',
-                  unicodeBidi: 'isolate',
+                  textAlign: 'center',
                 }}
               >
                 <span
