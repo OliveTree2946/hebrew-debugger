@@ -445,11 +445,10 @@ function SyntaxTab({
     )
   }
 
-  // 단어가 속한 통사 성분 찾기 — hebrew에서 / 제거 후 words 문자열과 비교
+  // 단어가 속한 통사 성분 찾기 — 양쪽 모두 / 제거 후 비교
   const cleanHebrew = word.hebrew.replace(/\//g, '')
-  const matchedRow = syntaxDiagram.find(
-    (row) =>
-      row.words.includes(cleanHebrew) || row.words.includes(word.hebrew)
+  const matchedRow = syntaxDiagram.find((row) =>
+    row.words.replace(/\//g, '').includes(cleanHebrew)
   )
 
   return (
