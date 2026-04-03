@@ -59,7 +59,21 @@ export default async function PassagePage({ params }: PageProps) {
     .eq('passage_id', id)
     .order('word_order')
 
-  const words: Word[] = wordsError || !wordsData ? [] : (wordsData as Word[])
+  // DB에서 가져온 words를 Word 타입으로 cast 후 related_words 형식 정규화
+  // generate-learning-notes.mjs는 {word, meaning} 형식으로 저장하지만
+  // 앱은 RelatedWord({w, m}) 형식을 사용 — 두 형식 모두 처리
+  const rawWords = wordsError || !wordsData ? [] : wordsData
+  const words: Word[] = rawWords.map((row) => {
+    const w = row as Record<string, unknown>
+    const rawRelated = w.related_words as Array<Record<string, string>> | null
+    const related_words: Word['related_words'] = rawRelated
+      ? rawRelated.map((rw) => ({
+          w: (rw.w ?? rw.word ?? '') as string,
+          m: (rw.m ?? rw.meaning ?? '') as string,
+        }))
+      : null
+    return { ...(row as Word), related_words }
+  })
 
   // ── 3. roots 테이블로 words.root / root_meaning 보강 ──
   // words.root가 null인 경우 roots.derived_words[].strongs = words.lemma 숫자로 매핑
