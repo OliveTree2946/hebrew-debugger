@@ -7,7 +7,7 @@
  */
 
 import { useState } from 'react'
-import type { Word, SemanticCard } from '@/types/index'
+import type { Word, SemanticCard, SyntaxDiagramRow } from '@/types/index'
 import SemanticCardCarousel from './SemanticCardCarousel'
 
 // ─────────────────────────────────────────
@@ -34,7 +34,7 @@ const COLOR = {
 // 탭 타입
 // ─────────────────────────────────────────
 
-type TabId = 'morph' | 'root' | 'cards'
+type TabId = 'morph' | 'syntax' | 'root' | 'cards'
 
 // ─────────────────────────────────────────
 // Props
@@ -43,6 +43,7 @@ type TabId = 'morph' | 'root' | 'cards'
 interface MorphModalProps {
   word: Word
   semanticCards: SemanticCard[]
+  syntaxDiagram: SyntaxDiagramRow[] | null
   onClose: () => void
 }
 
@@ -50,7 +51,7 @@ interface MorphModalProps {
 // 컴포넌트
 // ─────────────────────────────────────────
 
-export default function MorphModal({ word, semanticCards, onClose }: MorphModalProps) {
+export default function MorphModal({ word, semanticCards, syntaxDiagram, onClose }: MorphModalProps) {
   const [activeTab, setActiveTab] = useState<TabId>('morph')
 
   return (
@@ -137,6 +138,7 @@ export default function MorphModal({ word, semanticCards, onClose }: MorphModalP
           {(
             [
               { id: 'morph' as TabId, label: '형태 분석' },
+              { id: 'syntax' as TabId, label: '통사' },
               { id: 'root' as TabId, label: '어근' },
               { id: 'cards' as TabId, label: '의미 카드' },
             ] as { id: TabId; label: string }[]
@@ -176,6 +178,7 @@ export default function MorphModal({ word, semanticCards, onClose }: MorphModalP
           }}
         >
           {activeTab === 'morph' && <MorphTab word={word} />}
+          {activeTab === 'syntax' && <SyntaxTab word={word} syntaxDiagram={syntaxDiagram} />}
           {activeTab === 'root' && <RootTab word={word} />}
           {activeTab === 'cards' && <SemanticCardCarousel cards={semanticCards} />}
         </div>
@@ -415,7 +418,216 @@ function VerbInfoCell({ label, value }: { label: string; value: string | null })
 }
 
 // ─────────────────────────────────────────
-// 탭2: 어근
+// 탭2: 통사
+// ─────────────────────────────────────────
+
+function SyntaxTab({
+  word,
+  syntaxDiagram,
+}: {
+  word: Word
+  syntaxDiagram: SyntaxDiagramRow[] | null
+}) {
+  // syntax_diagram 데이터가 없으면 준비 중 메시지
+  if (!syntaxDiagram || syntaxDiagram.length === 0) {
+    return (
+      <p
+        style={{
+          fontFamily: 'Noto Sans KR, sans-serif',
+          fontSize: '13px',
+          color: COLOR.textFaint,
+          textAlign: 'center',
+          padding: '32px 0',
+        }}
+      >
+        통사 정보가 준비 중입니다.
+      </p>
+    )
+  }
+
+  // 단어가 속한 통사 성분 찾기 — hebrew에서 / 제거 후 words 문자열과 비교
+  const cleanHebrew = word.hebrew.replace(/\//g, '')
+  const matchedRow = syntaxDiagram.find(
+    (row) =>
+      row.words.includes(cleanHebrew) || row.words.includes(word.hebrew)
+  )
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* 문법 분류 (품사) */}
+      {word.pos_korean && (
+        <div>
+          <p
+            style={{
+              fontFamily: 'Noto Sans KR, sans-serif',
+              fontSize: '10px',
+              color: COLOR.textFaint,
+              letterSpacing: '0.5px',
+              margin: '0 0 8px',
+              textTransform: 'uppercase',
+            }}
+          >
+            문법 분류
+          </p>
+          <div
+            style={{
+              display: 'inline-block',
+              padding: '8px 16px',
+              background: COLOR.tagBg,
+              border: `1px solid rgba(196, 164, 106, 0.25)`,
+              borderRadius: '6px',
+              fontFamily: 'Noto Sans KR, sans-serif',
+              fontSize: '13px',
+              color: COLOR.gold,
+              letterSpacing: '0.3px',
+            }}
+          >
+            {word.pos_korean}
+          </div>
+        </div>
+      )}
+
+      {/* 문장 내 통사 역할 */}
+      <div>
+        <p
+          style={{
+            fontFamily: 'Noto Sans KR, sans-serif',
+            fontSize: '10px',
+            color: COLOR.textFaint,
+            letterSpacing: '0.5px',
+            margin: '0 0 12px',
+            textTransform: 'uppercase',
+          }}
+        >
+          문장 내 역할
+        </p>
+        {matchedRow ? (
+          <div
+            style={{
+              padding: '14px 16px',
+              background: `${matchedRow.color}12`,
+              border: `1px solid ${matchedRow.color}40`,
+              borderLeft: `3px solid ${matchedRow.color}`,
+              borderRadius: '8px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}
+          >
+            {/* 통사 역할 레이블 */}
+            <span
+              style={{
+                fontFamily: 'Noto Sans KR, sans-serif',
+                fontSize: '15px',
+                fontWeight: 700,
+                color: matchedRow.color,
+                letterSpacing: '0.3px',
+              }}
+            >
+              {matchedRow.role}
+            </span>
+            {/* 해당 성분 히브리어 */}
+            <span
+              style={{
+                fontFamily: 'Noto Serif Hebrew, serif',
+                fontSize: '18px',
+                color: COLOR.textPrimary,
+                direction: 'rtl',
+                unicodeBidi: 'isolate',
+              }}
+            >
+              {matchedRow.words}
+            </span>
+            {/* 한국어 번역 */}
+            <span
+              style={{
+                fontFamily: 'Noto Sans KR, sans-serif',
+                fontSize: '12px',
+                color: COLOR.textMuted,
+              }}
+            >
+              {matchedRow.korean}
+            </span>
+          </div>
+        ) : (
+          <p
+            style={{
+              fontFamily: 'Noto Sans KR, sans-serif',
+              fontSize: '13px',
+              color: COLOR.textFaint,
+              padding: '12px 0',
+            }}
+          >
+            이 단어의 통사 역할 정보를 찾을 수 없습니다.
+          </p>
+        )}
+      </div>
+
+      {/* 전체 통사 구조 요약 */}
+      <div>
+        <p
+          style={{
+            fontFamily: 'Noto Sans KR, sans-serif',
+            fontSize: '10px',
+            color: COLOR.textFaint,
+            letterSpacing: '0.5px',
+            margin: '0 0 10px',
+            textTransform: 'uppercase',
+          }}
+        >
+          문장 구조
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {syntaxDiagram.map((row, i) => (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '8px 12px',
+                background:
+                  row === matchedRow
+                    ? `${row.color}18`
+                    : COLOR.cardBg,
+                border: `1px solid ${row === matchedRow ? `${row.color}50` : COLOR.border}`,
+                borderRadius: '6px',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: 'Noto Sans KR, sans-serif',
+                  fontSize: '10px',
+                  color: row.color,
+                  minWidth: '48px',
+                  letterSpacing: '0.2px',
+                }}
+              >
+                {row.role}
+              </span>
+              <span
+                style={{
+                  fontFamily: 'Noto Serif Hebrew, serif',
+                  fontSize: '15px',
+                  color: COLOR.textMuted,
+                  direction: 'rtl',
+                  unicodeBidi: 'isolate',
+                  flex: 1,
+                  textAlign: 'right',
+                }}
+              >
+                {row.words}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────
+// 탭3: 어근
 // ─────────────────────────────────────────
 
 function RootTab({ word }: { word: Word }) {

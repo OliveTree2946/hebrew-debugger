@@ -214,6 +214,7 @@ export default function PassageClient({ passage, words, semanticCards }: Passage
         <MorphModal
           word={selectedWord}
           semanticCards={semanticCards.filter((c) => c.lemma === selectedWord.lemma)}
+          syntaxDiagram={passage.syntax_diagram ?? null}
           onClose={() => setSelectedWord(null)}
         />
       )}

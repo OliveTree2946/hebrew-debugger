@@ -78,6 +78,13 @@ export default function SemanticCardCarousel({ cards }: SemanticCardCarouselProp
     )
   }
 
+  // is_krv_anchor: true 카드를 앞으로 정렬
+  const sorted = [...cards].sort((a, b) => {
+    if (a.is_krv_anchor && !b.is_krv_anchor) return -1
+    if (!a.is_krv_anchor && b.is_krv_anchor) return 1
+    return (a.sort_order ?? 99) - (b.sort_order ?? 99)
+  })
+
   return (
     // 가로 스크롤 컨테이너
     <div
@@ -92,7 +99,7 @@ export default function SemanticCardCarousel({ cards }: SemanticCardCarouselProp
         scrollbarColor: 'rgba(196,164,106,0.3) transparent',
       }}
     >
-      {cards.map((card) => (
+      {sorted.map((card) => (
         <SemanticCardItem key={card.id} card={card} />
       ))}
     </div>
@@ -137,11 +144,15 @@ function SemanticCardItem({ card }: { card: SemanticCard }) {
             style={{
               fontFamily: 'Noto Sans KR, sans-serif',
               fontSize: '9px',
-              color: 'rgba(232, 220, 200, 0.45)',
+              color: COLOR.gold,
+              background: 'rgba(196, 164, 106, 0.12)',
+              border: '1px solid rgba(196, 164, 106, 0.3)',
+              borderRadius: '3px',
+              padding: '2px 6px',
               letterSpacing: '0.2px',
             }}
           >
-            개역개정 선택
+            개역개정이 선택한 의미
           </span>
         )}
       </div>
