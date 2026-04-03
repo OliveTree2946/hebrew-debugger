@@ -4,6 +4,9 @@
  * drill_questions 테이블 전체를 fetch해 DrillClient에 전달한다.
  */
 
+// 정적 프리렌더링 방지 — drill_questions는 시드 후 갱신되므로 매 요청마다 fetch
+export const dynamic = 'force-dynamic'
+
 import { supabase } from '@/lib/supabase'
 import type { DrillQuestion } from '@/types/index'
 import DrillClient from './_components/DrillClient'

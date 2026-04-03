@@ -4,6 +4,9 @@
  * Supabase passages 테이블에서 데이터를 fetch해 PassageFilter에 전달한다.
  */
 
+// 정적 프리렌더링 방지 — passages 데이터가 갱신될 수 있으므로 매 요청마다 fetch
+export const dynamic = 'force-dynamic'
+
 import { supabase } from '@/lib/supabase'
 import PassageFilter, { PassageRow } from './_components/PassageFilter'
 import Link from 'next/link'
