@@ -68,22 +68,38 @@ export default async function PassagePage({ params }: PageProps) {
     .select('root, meaning_korean, derived_words')
 
   if (rootsData && rootsData.length > 0) {
-    // Strong's 번호 → { root, meaning_korean } 역방향 맵 구축
-    const rootByStrongs = new Map<string, { root: string; meaning: string }>()
+    // Strong's 번호 → { root, meaning_korean, relatedWords } 역방향 맵 구축
+    type RootInfo = {
+      root: string
+      meaning: string
+      relatedWords: Array<{ w: string; m: string }>
+    }
+    const rootByStrongs = new Map<string, RootInfo>()
     for (const r of rootsData) {
-      const derived = r.derived_words as Array<{ strongs?: string }> | null
+      const derived = r.derived_words as Array<{
+        strongs?: string
+        word?: string
+        meaning?: string
+      }> | null
       if (!derived) continue
+
+      // roots.derived_words → RelatedWord[] ({ w, m }) 변환
+      const relatedWords = derived
+        .filter((dw) => dw.word)
+        .map((dw) => ({ w: dw.word as string, m: dw.meaning ?? '' }))
+
       for (const dw of derived) {
         if (dw.strongs && !rootByStrongs.has(dw.strongs)) {
           rootByStrongs.set(dw.strongs, {
             root: r.root as string,
             meaning: (r.meaning_korean as string) ?? '',
+            relatedWords,
           })
         }
       }
     }
 
-    // words.lemma에서 Strong's 번호 추출 후 root 데이터 주입
+    // words.lemma에서 Strong's 번호 추출 후 root / related_words 주입
     for (const w of words) {
       if (w.root || w.root_meaning) continue  // 이미 채워진 경우 skip
       if (!w.lemma) continue
@@ -96,6 +112,9 @@ export default async function PassagePage({ params }: PageProps) {
       if (!rootInfo) continue
       w.root = rootInfo.root
       w.root_meaning = rootInfo.meaning
+      if (!w.related_words || w.related_words.length === 0) {
+        w.related_words = rootInfo.relatedWords
+      }
     }
   }
 
