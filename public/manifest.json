@@ -1,0 +1,16 @@
+{
+  "name": "성서 히브리어 디버거",
+  "short_name": "히브리어",
+  "description": "신학생과 설교자를 위한 성서 히브리어 학습 도구",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#12100D",
+  "theme_color": "#C4A46A",
+  "orientation": "portrait-primary",
+  "lang": "ko",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

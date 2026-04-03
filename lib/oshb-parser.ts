@@ -203,9 +203,7 @@ export function parseOshbWord(
 
   // 대표 파싱 결과 (마지막 = 핵심 형태소)
   const primaryMorph = morphResults[morphResults.length - 1];
-  const posLabel = primaryMorph && 'label' in primaryMorph
-    ? primaryMorph.label
-    : primaryMorph?.pos ?? '불명';
+  const posLabel = primaryMorph?.label ?? '불명';
 
   // 접두어 설명 생성
   const prefixNote = lemmaParts.prefixes.length > 0

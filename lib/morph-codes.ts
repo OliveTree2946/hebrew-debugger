@@ -597,7 +597,7 @@ export function buildMorphParts(
     parts.push({
       text: mainText,
       role: mainResult.pos,
-      meaning: 'label' in mainResult ? mainResult.label.split(' · ')[0] : mainResult.pos,
+      meaning: mainResult.label.split(' · ')[0],
       color: mainResult.color,
     });
   }

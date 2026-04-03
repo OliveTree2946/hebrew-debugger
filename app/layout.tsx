@@ -1,9 +1,22 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
   title: '성서 히브리어 디버거',
   description: 'SEED Studio — 성서 히브리어 형태론 학습 도구',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: '히브리어',
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#C4A46A',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 }
 
 export default function RootLayout({
