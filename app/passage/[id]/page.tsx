@@ -61,7 +61,45 @@ export default async function PassagePage({ params }: PageProps) {
 
   const words: Word[] = wordsError || !wordsData ? [] : (wordsData as Word[])
 
-  // ── 3. semantic_cards fetch (해당 passage의 lemma 집합으로 IN 쿼리) ──
+  // ── 3. roots 테이블로 words.root / root_meaning 보강 ──
+  // words.root가 null인 경우 roots.derived_words[].strongs = words.lemma 숫자로 매핑
+  const { data: rootsData } = await supabase
+    .from('roots')
+    .select('root, meaning_korean, derived_words')
+
+  if (rootsData && rootsData.length > 0) {
+    // Strong's 번호 → { root, meaning_korean } 역방향 맵 구축
+    const rootByStrongs = new Map<string, { root: string; meaning: string }>()
+    for (const r of rootsData) {
+      const derived = r.derived_words as Array<{ strongs?: string }> | null
+      if (!derived) continue
+      for (const dw of derived) {
+        if (dw.strongs && !rootByStrongs.has(dw.strongs)) {
+          rootByStrongs.set(dw.strongs, {
+            root: r.root as string,
+            meaning: (r.meaning_korean as string) ?? '',
+          })
+        }
+      }
+    }
+
+    // words.lemma에서 Strong's 번호 추출 후 root 데이터 주입
+    for (const w of words) {
+      if (w.root || w.root_meaning) continue  // 이미 채워진 경우 skip
+      if (!w.lemma) continue
+      // lemma 형식: "H1254", "Hb/H7225", "Hd/H8064" — 마지막 H 뒤 숫자가 Strong's 번호
+      const lastH = w.lemma.lastIndexOf('H')
+      if (lastH < 0) continue
+      const strongs = w.lemma.slice(lastH + 1).match(/^\d+/)?.[0]
+      if (!strongs) continue
+      const rootInfo = rootByStrongs.get(strongs)
+      if (!rootInfo) continue
+      w.root = rootInfo.root
+      w.root_meaning = rootInfo.meaning
+    }
+  }
+
+  // ── 4. semantic_cards fetch (해당 passage의 lemma 집합으로 IN 쿼리) ──
   // words에서 null이 아닌 lemma만 추출 → 중복 제거 → Set → 배열
   const lemmaSet = Array.from(
     new Set(words.map((w) => w.lemma).filter((l): l is string => l !== null))
