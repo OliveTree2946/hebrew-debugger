@@ -20,8 +20,9 @@ export interface MorphPartItem {
 // ─────────────────────────────────────────
 
 export interface RelatedWord {
-  w: string   // 히브리어 단어
-  m: string   // 의미 한국어
+  w: string             // 히브리어 단어
+  m: string             // 의미 한국어
+  example_ref?: string  // 참조 구절 (예: "창 13:10"), 없을 수 있음
 }
 
 // ─────────────────────────────────────────

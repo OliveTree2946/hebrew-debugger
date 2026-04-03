@@ -445,11 +445,18 @@ function SyntaxTab({
     )
   }
 
-  // 단어가 속한 통사 성분 찾기 — 양쪽 모두 / 제거 후 비교
-  const cleanHebrew = word.hebrew.replace(/\//g, '')
-  const matchedRow = syntaxDiagram.find((row) =>
-    row.words.replace(/\//g, '').includes(cleanHebrew)
-  )
+  // 히브리어 모음 부호(U+0591–U+05C7) 및 슬래시 제거 헬퍼
+  const stripDiacritics = (s: string) =>
+    s.replace(/[\u0591-\u05C7]/g, '').replace(/\//g, '').trim()
+
+  const strippedWord = stripDiacritics(word.hebrew)
+
+  // 단어가 속한 통사 성분 찾기:
+  // row.words를 공백으로 분리해 개별 단어와 완전 매칭 (부분 매칭 오탐 방지)
+  const matchedRow = syntaxDiagram.find((row) => {
+    const rowWords = stripDiacritics(row.words).split(/\s+/)
+    return rowWords.includes(strippedWord)
+  })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -722,15 +729,35 @@ function RootTab({ word }: { word: Word }) {
                 >
                   {rw.w}
                 </span>
-                <span
+                <div
                   style={{
-                    fontFamily: 'Noto Sans KR, sans-serif',
-                    fontSize: '12px',
-                    color: COLOR.textMuted,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
+                    gap: '2px',
                   }}
                 >
-                  {rw.m}
-                </span>
+                  <span
+                    style={{
+                      fontFamily: 'Noto Sans KR, sans-serif',
+                      fontSize: '12px',
+                      color: COLOR.textMuted,
+                    }}
+                  >
+                    {rw.m}
+                  </span>
+                  {rw.example_ref && (
+                    <span
+                      style={{
+                        fontFamily: 'Noto Sans KR, sans-serif',
+                        fontSize: '10px',
+                        color: COLOR.textFaint,
+                      }}
+                    >
+                      {rw.example_ref}
+                    </span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
