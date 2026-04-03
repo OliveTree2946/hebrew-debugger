@@ -26,13 +26,25 @@ const COLOR = {
 // ─────────────────────────────────────────
 
 export default async function HomePage() {
-  // passages 테이블 SELECT
+  // passages 테이블 SELECT — 실제 DB 컬럼명 사용
   const { data, error } = await supabase
     .from('passages')
-    .select('id, ref, ref_heb, korean, tags, difficulty, grammar_points')
+    .select('id, book_korean, chapter, verse_start, verse_end, korean_text, tags, difficulty, grammar_points')
     .order('id')
 
-  const passages: PassageRow[] = error || !data ? [] : data
+  // DB 컬럼 → PassageRow 타입 매핑
+  const passages: PassageRow[] = (data ?? []).map((p: Record<string, unknown>) => ({
+    id: p.id as string,
+    ref: `${p.book_korean} ${p.chapter}:${p.verse_start}${p.verse_end ? `-${p.verse_end}` : ''}`,
+    ref_heb: null,
+    korean: (p.korean_text as string | null) ?? '',
+    tags: (p.tags as string[] | null) ?? [],
+    difficulty: p.difficulty === 'beginner' ? 1 : p.difficulty === 'intermediate' ? 3 : 5,
+    grammar_points: (p.grammar_points as string[] | null) ?? null,
+  }))
+
+  // 임시 디버그: 에러 메시지 표시
+  const dbError = error ? `[DB 오류] ${error.message} (code: ${error.code})` : null
 
   return (
     <main
@@ -107,6 +119,22 @@ export default async function HomePage() {
           <NavTab href="/" label="📖 본문 분석" active />
           <NavTab href="/drill" label="⚡ 빈야님 드릴" active={false} />
         </nav>
+
+        {/* ── 임시 디버그 에러 표시 ── */}
+        {dbError && (
+          <div style={{
+            background: 'rgba(246,114,128,0.1)',
+            border: '1px solid #F67280',
+            borderRadius: '6px',
+            padding: '12px 16px',
+            marginBottom: '20px',
+            fontSize: '12px',
+            color: '#F67280',
+            fontFamily: 'monospace',
+          }}>
+            {dbError}
+          </div>
+        )}
 
         {/* ── 태그 필터 + 카드 그리드 (Client Component) ── */}
         <PassageFilter passages={passages} />

@@ -20,11 +20,11 @@ interface PageProps {
 export default async function PassagePage({ params }: PageProps) {
   const { id } = await params
 
-  // ── 1. passages 단일 행 fetch ──
+  // ── 1. passages 단일 행 fetch — 실제 DB 컬럼명 사용 ──
   const { data: passageData, error: passageError } = await supabase
     .from('passages')
     .select(
-      'id, ref, ref_heb, korean, tags, difficulty, grammar_points, syntax_diagram, syntax_note'
+      'id, book_korean, chapter, verse_start, verse_end, korean_text, tags, difficulty, grammar_points, syntax_diagram, syntax_note'
     )
     .eq('id', id)
     .maybeSingle()
@@ -34,7 +34,19 @@ export default async function PassagePage({ params }: PageProps) {
     notFound()
   }
 
-  const passage = passageData as Passage
+  // DB 컬럼 → Passage 타입 매핑
+  const p = passageData as Record<string, unknown>
+  const passage: Passage = {
+    id: p.id as string,
+    ref: `${p.book_korean} ${p.chapter}:${p.verse_start}${p.verse_end ? `-${p.verse_end}` : ''}`,
+    ref_heb: null,
+    korean: (p.korean_text as string | null) ?? '',
+    tags: (p.tags as string[] | null) ?? [],
+    difficulty: p.difficulty === 'beginner' ? 1 : p.difficulty === 'intermediate' ? 3 : 5,
+    grammar_points: (p.grammar_points as string[] | null) ?? null,
+    syntax_diagram: (p.syntax_diagram as Passage['syntax_diagram']) ?? null,
+    syntax_note: (p.syntax_note as string | null) ?? null,
+  }
 
   // ── 2. words 목록 fetch (word_order 순) ──
   const { data: wordsData, error: wordsError } = await supabase

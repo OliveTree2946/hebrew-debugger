@@ -87,12 +87,13 @@ interface ResultItem {
 // ─────────────────────────────────────────
 interface DrillClientProps {
   questions: DrillQuestion[]
+  dbError?: string | null
 }
 
 // ─────────────────────────────────────────
 // 메인 컴포넌트
 // ─────────────────────────────────────────
-export default function DrillClient({ questions }: DrillClientProps) {
+export default function DrillClient({ questions, dbError }: DrillClientProps) {
   const [phase, setPhase] = useState<Phase>('learn')
   const [qIdx, setQIdx] = useState<number>(0)
   const [score, setScore] = useState<number>(0)
@@ -199,7 +200,22 @@ export default function DrillClient({ questions }: DrillClientProps) {
       )}
       {phase === 'quiz' && questions.length === 0 && (
         <div style={{ textAlign: 'center', padding: '60px 0', color: C.textMuted }}>
-          등록된 문제가 없습니다.
+          {dbError ? (
+            <div style={{
+              background: 'rgba(246,114,128,0.1)',
+              border: '1px solid #F67280',
+              borderRadius: '6px',
+              padding: '12px 16px',
+              fontSize: '12px',
+              color: '#F67280',
+              fontFamily: 'monospace',
+              textAlign: 'left',
+            }}>
+              {dbError}
+            </div>
+          ) : (
+            '등록된 문제가 없습니다.'
+          )}
         </div>
       )}
       {phase === 'result' && (

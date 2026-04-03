@@ -18,5 +18,8 @@ export default async function DrillPage() {
 
   const questions: DrillQuestion[] = error || !data ? [] : (data as DrillQuestion[])
 
-  return <DrillClient questions={questions} />
+  // 임시 디버그: 에러 메시지 전달
+  const dbError = error ? `[DB 오류] ${error.message} (code: ${error.code})` : null
+
+  return <DrillClient questions={questions} dbError={dbError} />
 }
